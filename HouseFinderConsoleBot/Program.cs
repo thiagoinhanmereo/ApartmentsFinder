@@ -26,7 +26,7 @@ namespace HouseFinderConsoleBot
         {
             Console.WriteLine("Sending messages...");
             BotClient = new TelegramBotClient("bot_key_here");
-            ChatId = "chat_key_here";
+            ChatId = "chat_id_here";
 
             //Just a example
             BotClient.OnMessage += BotClient_OnMessage;
@@ -44,8 +44,11 @@ namespace HouseFinderConsoleBot
 
         private static async Task SendApartmentsMessages(List<ApartmentInfo> apartments)
         {
-            foreach (var apartment in apartments)
+            foreach (var apartment in apartments)   
+            {
+                Console.WriteLine("Sending apartment message...");
                 await BotClient.SendApartmentMessages(ChatId, apartment);
+            }
         }
 
         private static async Task SendInitialMessage(List<ApartmentInfo> apartments)
@@ -55,10 +58,17 @@ namespace HouseFinderConsoleBot
 
         private static async Task CallPuppeteer()
         {
-            var apartmentsDataFileName = @"C:\ApartmentsTest\ApartmentsData.txt";
-            string oldApartmentsData = File.ReadAllText(apartmentsDataFileName);
-            var oldApartments = JsonConvert.DeserializeObject<List<ApartmentInfo>>(oldApartmentsData);
+            Console.WriteLine("Step 1...");
+            var apartmentsDataFileName = @"ApartmentsData.txt";
+            var oldApartments = new List<ApartmentInfo>();
+            if (File.Exists(apartmentsDataFileName))
+            {
+                string oldApartmentsData = File.ReadAllText(apartmentsDataFileName);
+                oldApartments = JsonConvert.DeserializeObject<List<ApartmentInfo>>(oldApartmentsData);
+            }
 
+            Console.WriteLine("Step 2...");
+            
             List<ApartmentInfo> apartmentsFromPage = await GetAparmentsFromPage();
             System.IO.File.WriteAllText(apartmentsDataFileName, JsonConvert.SerializeObject(apartmentsFromPage));
 

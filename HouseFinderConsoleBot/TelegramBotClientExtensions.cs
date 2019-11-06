@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Telegram.Bot;
@@ -12,14 +13,16 @@ namespace HouseFinderConsoleBot.BotClient.Extensions
     {
         public static Task<Message> SendApartmentMessages(this ITelegramBotClient botClient, string chatId, ApartmentInfo apartment)
         {
-            return botClient.SendTextMessageAsync(
+            return botClient.SendPhotoAsync(
                        chatId: new ChatId(chatId),
-                       text: $"*Rua*: {apartment.Rua},\n*Bairro*: {apartment.Bairro},\n*Área*: {apartment.Area} m²,\n*Aluguel*: {apartment.Aluguel.Replace("Aluguel ", "")},\n*Valor Total*: {apartment.Total.Replace("Total ", "")}",
-                       parseMode: ParseMode.Markdown,
-                       replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithUrl(
-                                 "Check this link:",
-                                 apartment.Href
-                               ))
+                       photo: apartment.ImageRef,
+                       caption: $"<b>Rua</b>: {apartment.Rua},\n" +
+                                $"<b>Bairro</b>: {apartment.Bairro},\n" +
+                                $"<b>Área</b>: {apartment.Area}m²,\n" +
+                                $"<b>Aluguel</b>: {apartment.Aluguel.Replace("Aluguel ", "")},\n" +
+                                $"<b>Valor Total</b>: {apartment.Total.Replace("Total ", "")},\n" +
+                                $"<b>Link</b>: <a>{apartment.Href}</a>",
+                       parseMode: ParseMode.Html                       
                      );
         }
 
@@ -42,6 +45,7 @@ namespace HouseFinderConsoleBot.BotClient.Extensions
                     );
             }
 
+            Console.WriteLine("No new apartment!");
             return Task.FromResult<object>(null);
         }
     }

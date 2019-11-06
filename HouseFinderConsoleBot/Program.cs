@@ -18,15 +18,34 @@ namespace HouseFinderConsoleBot
         public static string ChatId;
         static void Main(string[] args)
         {
-            //Thread.Sleep (30000);
-            AsyncContext.Run(CallPuppeteer);
+            BotClient = new TelegramBotClient("bot_key_here");
+            ChatId = "chat_id_here";
+            
+            // For Interval in Seconds 
+            // This Scheduler will start at 11:10 and call after every 15 Seconds
+            // IntervalInSeconds(start_hour, start_minute, seconds)
+            // Eg.: MyScheduler.IntervalInSeconds(11, 10, 15,
+            MyScheduler.IntervalInMinutes(DateTime.Now.Hour, DateTime.Now.Minute, 10,
+            () => {
+                Console.WriteLine($"====== Running scheduled job at: {DateTime.Now.ToString("HH:mm:ss")} ======");
+                AsyncContext.Run(CallPuppeteer);
+            });
+
+            Console.ReadKey();
         }
 
         private static async Task SendNewApartmentsMessage(List<ApartmentInfo> apartments)
         {
             Console.WriteLine("Sending messages...");
-            BotClient = new TelegramBotClient("bot_key_here");
-            ChatId = "chat_id_here";
+
+            if (apartments.Count >= 40)
+            {
+                Console.WriteLine("This is the first task running and the apartments diff file was not created prevously");
+                Console.WriteLine("Skipping send message step");
+                Console.WriteLine("Task successfully done");
+
+                return;
+            }
 
             //Just a example
             BotClient.OnMessage += BotClient_OnMessage;
@@ -40,6 +59,8 @@ namespace HouseFinderConsoleBot
             await SendApartmentsMessages(apartments);
 
             BotClient.StopReceiving();
+
+            Console.WriteLine("Messages successfully sent");
         }
 
         private static async Task SendApartmentsMessages(List<ApartmentInfo> apartments)
@@ -58,8 +79,16 @@ namespace HouseFinderConsoleBot
 
         private static async Task CallPuppeteer()
         {
-            Console.WriteLine("Step 1...");
-            var apartmentsDataFileName = @"ApartmentsData.txt";
+            Console.WriteLine("Reading old apartments");
+
+            if (Directory.Exists("app/files"))
+                Console.WriteLine("Directory already exists, no need to create a new one");
+            else
+                Console.WriteLine("Creating directory");
+
+            Directory.CreateDirectory("app/files");            
+
+            var apartmentsDataFileName = @"app/files/ApartmentsData.txt";
             var oldApartments = new List<ApartmentInfo>();
             if (File.Exists(apartmentsDataFileName))
             {
@@ -67,28 +96,35 @@ namespace HouseFinderConsoleBot
                 oldApartments = JsonConvert.DeserializeObject<List<ApartmentInfo>>(oldApartmentsData);
             }
 
-            Console.WriteLine("Step 2...");
-            
+            Console.WriteLine("Getting apartments from page");
             List<ApartmentInfo> apartmentsFromPage = await GetAparmentsFromPage();
-            System.IO.File.WriteAllText(apartmentsDataFileName, JsonConvert.SerializeObject(apartmentsFromPage));
 
+            Console.WriteLine("Writing apartments on file");            
+            File.WriteAllText(apartmentsDataFileName, JsonConvert.SerializeObject(apartmentsFromPage));
+
+            Console.WriteLine("Comparing apartments and separating news");
             List<ApartmentInfo> newApartments = GetNewApartments(oldApartments, apartmentsFromPage);
             await SendNewApartmentsMessage(newApartments);
         }
 
         private static async Task<List<ApartmentInfo>> GetAparmentsFromPage()
         {
+            Console.WriteLine("Downloading chromium");
             await DowloadChromium();
 
+            Console.WriteLine("Launching chromium :|");
             Browser browser = await Puppeteer.LaunchAsync(new LaunchOptions
             {
-                Headless = false,
+                Headless = true,
                 DefaultViewport = new ViewPortOptions()
                 {
                     Width = 1368,
                     Height = 768,
-                }
+                },
+                Args = new []{"--no-sandbox --disable-setuid-sandbox"}
             });
+
+            Console.WriteLine("Chromium OK! Searching apartments on page");
 
             // Create a new page and go to Bing Maps
             Page page = await browser.NewPageAsync();
@@ -131,19 +167,21 @@ namespace HouseFinderConsoleBot
                                                       {
                                                         var linkEl = element.getElementsByClassName('fHkake')[0];
                                                         var ruaEl = element.getElementsByClassName('falbBb')[0];
-                                                              var bairroEl = element.getElementsByClassName('Ongdx')[0];
-                                                              var areaEl = element.getElementsByClassName('ivMPuZ')[0];
-                                                              var aluguelEl = element.getElementsByClassName('dfcRZz')[0];
-                                                              var totalEl = element.getElementsByClassName('WCcfX')[0];
+                                                        var bairroEl = element.getElementsByClassName('Ongdx')[0];
+                                                        var areaEl = element.getElementsByClassName('ivMPuZ')[0];
+                                                        var aluguelEl = element.getElementsByClassName('dfcRZz')[0];
+                                                        var totalEl = element.getElementsByClassName('WCcfX')[0];
+                                                        var imageEl = element.getElementsByTagName('img')[0];
 
-                                                              apartments.push({ 
-                                                                href: linkEl.href,
-                                                                rua: ruaEl.innerText,
-                                                                bairro: bairroEl.innerText,
-                                                                area: areaEl.innerText,
-                                                                aluguel: aluguelEl.innerText,
-                                                                total: totalEl.innerText 
-                                                              });                                                                   
+                                                        apartments.push({ 
+                                                          href: linkEl.href,
+                                                          rua: ruaEl.innerText,
+                                                          bairro: bairroEl.innerText,
+                                                          area: areaEl.innerText,
+                                                          aluguel: aluguelEl.innerText,
+                                                          total: totalEl.innerText,
+                                                          imageRef: imageEl.src                                                
+                                                        });                                                                   
                                                       };
 
                                                       return apartments;

@@ -1,0 +1,1 @@
+docker run -v ~/containerfiles:/app/files -it housefinderimage /bin/bash

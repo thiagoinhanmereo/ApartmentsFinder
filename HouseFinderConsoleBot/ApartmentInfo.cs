@@ -7,6 +7,7 @@ namespace HouseFinderConsoleBot
 {
     public class ApartmentInfo
     {
+        public string ImageRef { get; set; }
         public string Href { get; set; }
         public string Rua { get; set; }
         public string Bairro { get; set; }
